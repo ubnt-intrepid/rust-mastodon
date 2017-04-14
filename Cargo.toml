@@ -1,0 +1,16 @@
+[package]
+name = "mastodon"
+description = "Yet another API of Mastodon"
+version = "0.0.0"
+authors = ["Yusuke Sasaki <yusuke.sasaki.nuem@gmail.com>"]
+
+[dependencies]
+clap = "*"
+hyper = "*"
+hyper-native-tls = "*"
+error-chain = "*"
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+url = "*"
+native-tls = "*"
