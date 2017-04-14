@@ -1,57 +1,92 @@
-use hyper;
-use serde;
+use hyper::Client as RawClient;
+use hyper::client::Body;
+use hyper::net::HttpsConnector;
+use hyper::header::ContentType;
+use hyper::status::StatusCode;
+use hyper_native_tls::NativeTlsClient;
+use serde::Deserialize;
 use serde_json;
+use url::{Url, form_urlencoded};
 use Result;
 
-pub struct Config {
+
+pub struct MastodonConfig {
   pub server: String,
-  pub cliend_id: String,
+  pub client_id: String,
   pub client_secret: String,
-  pub access_token: String,
+  access_token: Option<String>,
 }
 
-pub struct Client {
-  client: hyper::Client,
-  config: Config,
-}
-
-impl Client {
-  fn get<T, U>(&self, url: U) -> Result<T>
-    where T: serde::Deserialize + Default,
-          U: hyper::client::IntoUrl
+impl MastodonConfig {
+  pub fn new<S, I, C>(server: S, client_id: I, client_secret: C) -> Self
+    where S: Into<String>,
+          I: Into<String>,
+          C: Into<String>
   {
-    let builder = self.client.get(url);
-    let response = builder.send()?;
-    serde_json::from_reader(response).map_err(Into::into)
-  }
-
-  fn post<T, U>(&self, url: U) -> Result<T>
-    where T: serde::Deserialize + Default,
-          U: hyper::client::IntoUrl
-  {
-    let builder = self.client.post(url);
-    let response = builder.send()?;
-    serde_json::from_reader(response).map_err(Into::into)
+    MastodonConfig {
+      server: server.into(),
+      client_id: client_id.into(),
+      client_secret: client_secret.into(),
+      access_token: None,
+    }
   }
 }
 
-impl Client {
-  pub fn new(config: Config) -> Result<Self> {
-    use hyper::net::HttpsConnector;
-    use hyper_native_tls::NativeTlsClient;
+/// Mastodon API client.
+pub struct Mastodon {
+  client: RawClient,
+  config: MastodonConfig,
+}
 
+impl Mastodon {
+  pub fn new(config: MastodonConfig) -> Result<Self> {
     let client = NativeTlsClient::new().map(HttpsConnector::new)
-      .map(hyper::Client::with_connector)?;
-    Ok(Client {
+      .map(RawClient::with_connector)?;
+
+    Ok(Mastodon {
          client: client,
          config: config,
        })
   }
 
-  pub fn authenticate<U, P>(&self, username: U, password: P) -> Result<()>
+  pub fn authenticate<U, P>(&mut self, username: U, password: P) -> Result<()>
     where U: AsRef<str>,
           P: AsRef<str>
   {
+    let body = form_urlencoded::Serializer::new(String::new())
+      .append_pair("client_id", &self.config.client_id)
+      .append_pair("client_secret", &self.config.client_secret)
+      .append_pair("grant_type", "password")
+      .append_pair("username", username.as_ref())
+      .append_pair("password", password.as_ref())
+      .append_pair("scope", "read write follow")
+      .finish();
+
+    #[derive(Deserialize)]
+    struct AuthResponse {
+      access_token: String,
+    }
+    let response: AuthResponse = self.post("/oauth/token", &body)?;
+    self.config.access_token = Some(response.access_token);
+
     Ok(())
+  }
+}
+
+impl Mastodon {
+  fn post<'a, T, B>(&'a self, path: &str, body: B) -> Result<T>
+    where T: Deserialize,
+          B: Into<Body<'a>>
+  {
+    let url = Url::parse(&self.config.server).and_then(|u| u.join(path))?;
+    let response = self.client
+      .post(url)
+      .header(ContentType::form_url_encoded())
+      .body(body)
+      .send()?;
+    if response.status != StatusCode::Ok {
+      Err(format!("bad authorization: {:?}", response.status))?;
+    }
+    serde_json::from_reader(response).map_err(Into::into)
   }
 }

@@ -12,6 +12,8 @@ extern crate url;
 pub mod register;
 mod mastodon;
 
+pub use mastodon::{Mastodon, MastodonConfig};
+
 use url::ParseError as UrlParseError;
 use native_tls::Error as NativeTlsError;
 use hyper::Error as HyperError;
