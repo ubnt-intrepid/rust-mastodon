@@ -9,6 +9,8 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate url;
 
+pub mod register;
+
 use url::ParseError as UrlParseError;
 use native_tls::Error as NativeTlsError;
 use hyper::Error as HyperError;
