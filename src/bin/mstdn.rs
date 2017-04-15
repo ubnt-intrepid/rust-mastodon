@@ -1,26 +1,14 @@
 extern crate mastodon;
 extern crate clap;
+extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 
 use std::env;
 use std::fs::OpenOptions;
 use std::io::Write;
 use mastodon::{Mastodon, MastodonConfig};
 use mastodon::register::{App, AppConfig};
-
-
-fn main() {
-  //register_app();
-  let app: App = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/app.json"))
-    .parse()
-    .unwrap();
-
-  let username = env::args().nth(1).unwrap();
-  let password = env::args().nth(2).unwrap();
-
-  let config = MastodonConfig::new("https://pawoo.net", app.client_id, app.client_secret);
-  let mut cli = Mastodon::new(config).unwrap();
-  cli.authenticate(&username, &password).unwrap();
-}
 
 #[allow(dead_code)]
 fn register_app() {
@@ -37,4 +25,27 @@ fn register_app() {
     .open("app.json")
     .and_then(|mut f| f.write_all(app.to_string().as_bytes()))
     .unwrap();
+}
+
+
+fn main() {
+  //register_app();
+
+  let f = OpenOptions::new()
+    .read(true)
+    .open(std::env::home_dir().unwrap().join("mastodon.json"))
+    .unwrap();
+
+  #[derive(Deserialize)]
+  struct Config {
+    username: String,
+    password: String,
+    server: String,
+    app: App,
+  }
+  let c: Config = serde_json::from_reader(f).unwrap();
+
+  let config = MastodonConfig::new(c.server, c.app.client_id, c.app.client_secret);
+  let mut cli = Mastodon::new(config).unwrap();
+  cli.authenticate(&c.username, &c.password).unwrap();
 }
