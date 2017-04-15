@@ -73,10 +73,10 @@ impl AppConfig {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct App {
-  id: i64,
-  redirect_uri: String,
-  client_id: String,
-  client_secret: String,
+  pub id: i64,
+  pub redirect_uri: String,
+  pub client_id: String,
+  pub client_secret: String,
 }
 
 impl ::std::str::FromStr for App {
