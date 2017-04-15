@@ -7,11 +7,11 @@ extern crate serde_derive;
 use std::fs::OpenOptions;
 use std::io::Write;
 use mastodon::{Mastodon, MastodonConfig};
-use mastodon::register::{App, AppConfig};
+use mastodon::register::{RegisterConfig, Application};
 
 #[allow(dead_code)]
 fn register_app() {
-  let app = AppConfig::new("https://pawoo.net", "rustydon")
+  let app = RegisterConfig::new("https://pawoo.net", "rustydon")
     .redirect_uris("urn:ietf:wg:oauth:2.0:oob")
     .scopes("read write follow")
     .register()
@@ -46,7 +46,7 @@ fn main() {
     username: String,
     password: String,
     server: String,
-    app: App,
+    app: Application,
   }
   let c: Config = serde_json::from_reader(f).unwrap();
   let ref username = c.username;

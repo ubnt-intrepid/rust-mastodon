@@ -1,3 +1,5 @@
+use std::str::FromStr;
+use std::string::ToString;
 use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
 use hyper::Client;
@@ -9,7 +11,7 @@ use Result;
 
 
 /// Configurations of registering application
-pub struct AppConfig {
+pub struct RegisterConfig {
   pub server_url: String,
   pub client_name: String,
   pub redirect_uris: String,
@@ -17,12 +19,12 @@ pub struct AppConfig {
   pub website: Option<String>,
 }
 
-impl AppConfig {
+impl RegisterConfig {
   pub fn new<S, C>(server_url: S, client_name: C) -> Self
     where S: Into<String>,
           C: Into<String>
   {
-    AppConfig {
+    RegisterConfig {
       server_url: server_url.into(),
       client_name: client_name.into(),
       redirect_uris: "urn:ietf:wg:oauth:2.0:oob".into(),
@@ -52,8 +54,8 @@ impl AppConfig {
     self
   }
 
-  pub fn register(self) -> Result<App> {
-    App::register(self)
+  pub fn register(self) -> Result<Application> {
+    register(self)
   }
 
   fn into_form_url_encoded(self) -> String {
@@ -72,43 +74,42 @@ impl AppConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct App {
+pub struct Application {
   pub id: i64,
   pub redirect_uri: String,
   pub client_id: String,
   pub client_secret: String,
 }
 
-impl ::std::str::FromStr for App {
+impl FromStr for Application {
   type Err = ::Error;
   fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
     serde_json::from_str(s).map_err(Into::into)
   }
 }
 
-impl ::std::string::ToString for App {
+impl ToString for Application {
   fn to_string(&self) -> String {
     serde_json::to_string_pretty(self).unwrap()
   }
 }
 
-impl App {
-  /// register a mastodon application to server.
-  fn register(config: AppConfig) -> Result<Self> {
-    let url = Url::parse(&config.server_url).and_then(|u| u.join("/api/v1/apps"))?;
 
-    let client: Client = NativeTlsClient::new().map(HttpsConnector::new)
-      .map(Client::with_connector)?;
+/// register a mastodon application to server.
+pub fn register(config: RegisterConfig) -> Result<Application> {
+  let url = Url::parse(&config.server_url).and_then(|u| u.join("/api/v1/apps"))?;
 
-    let response = client.post(url)
-      .header(ContentType::form_url_encoded())
-      .body(&config.into_form_url_encoded())
-      .send()?;
+  let client: Client = NativeTlsClient::new().map(HttpsConnector::new)
+    .map(Client::with_connector)?;
 
-    if response.status != StatusCode::Ok {
-      Err(format!("bad request: {:?}", response.status))?;
-    }
+  let response = client.post(url)
+    .header(ContentType::form_url_encoded())
+    .body(&config.into_form_url_encoded())
+    .send()?;
 
-    serde_json::from_reader(response).map_err(Into::into)
+  if response.status != StatusCode::Ok {
+    Err(format!("bad request: {:?}", response.status))?;
   }
+
+  serde_json::from_reader(response).map_err(Into::into)
 }

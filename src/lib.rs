@@ -11,6 +11,7 @@ extern crate url;
 
 pub mod register;
 mod mastodon;
+pub mod types;
 
 pub use mastodon::{Mastodon, MastodonConfig};
 
