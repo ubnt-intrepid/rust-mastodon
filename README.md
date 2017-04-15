@@ -7,3 +7,4 @@ __EXPERIMENTAL__
 
 ## Implentation
 - [x] POST /api/v1/apps
+- [x] POST /oauth/token
