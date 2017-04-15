@@ -49,8 +49,11 @@ fn main() {
     app: App,
   }
   let c: Config = serde_json::from_reader(f).unwrap();
+  let ref username = c.username;
+  let ref password = c.password;
 
   let config = MastodonConfig::new(c.server, c.app.client_id, c.app.client_secret);
-  let mut cli = Mastodon::new(config).unwrap();
-  cli.authenticate(&c.username, &c.password).unwrap();
+  let cli = Mastodon::new(config)
+    .and_then(|cli| cli.authenticate(username, password))
+    .unwrap();
 }

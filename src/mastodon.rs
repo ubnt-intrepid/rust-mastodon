@@ -49,7 +49,7 @@ impl Mastodon {
        })
   }
 
-  pub fn authenticate<U, P>(&mut self, username: U, password: P) -> Result<()>
+  pub fn authenticate<U, P>(mut self, username: U, password: P) -> Result<Self>
     where U: AsRef<str>,
           P: AsRef<str>
   {
@@ -69,7 +69,7 @@ impl Mastodon {
     let response: AuthResponse = self.post("/oauth/token", &body)?;
     self.config.access_token = Some(response.access_token);
 
-    Ok(())
+    Ok(self)
   }
 }
 
