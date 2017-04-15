@@ -1,14 +1,15 @@
 use hyper::Client as RawClient;
-use hyper::client::Body;
+use hyper::method::Method;
 use hyper::net::HttpsConnector;
-use hyper::header::ContentType;
+use hyper::header::{Authorization, Bearer, ContentType};
 use hyper::status::StatusCode;
 use hyper_native_tls::NativeTlsClient;
 use serde::Deserialize;
 use serde_json;
 use url::{Url, form_urlencoded};
-use Result;
 
+use Result;
+use types::*;
 
 pub struct MastodonConfig {
   pub server: String,
@@ -53,6 +54,7 @@ impl Mastodon {
     where U: AsRef<str>,
           P: AsRef<str>
   {
+    let url = Url::parse(&self.config.server).and_then(|u| u.join("/oauth/token"))?;
     let body = form_urlencoded::Serializer::new(String::new())
       .append_pair("client_id", &self.config.client_id)
       .append_pair("client_secret", &self.config.client_secret)
@@ -62,31 +64,48 @@ impl Mastodon {
       .append_pair("scope", "read write follow")
       .finish();
 
-    #[derive(Deserialize)]
-    struct AuthResponse {
-      access_token: String,
-    }
-    let response: AuthResponse = self.post("/oauth/token", &body)?;
-    self.config.access_token = Some(response.access_token);
-
-    Ok(self)
-  }
-}
-
-impl Mastodon {
-  fn post<'a, T, B>(&'a self, path: &str, body: B) -> Result<T>
-    where T: Deserialize,
-          B: Into<Body<'a>>
-  {
-    let url = Url::parse(&self.config.server).and_then(|u| u.join(path))?;
     let response = self.client
       .post(url)
       .header(ContentType::form_url_encoded())
-      .body(body)
+      .body(&body)
       .send()?;
     if response.status != StatusCode::Ok {
       Err(format!("Failed at POST: {:?}", response))?;
     }
+
+    #[derive(Deserialize)]
+    struct AuthResponse {
+      access_token: String,
+    }
+    let response: AuthResponse = serde_json::from_reader(response)?;
+    self.config.access_token = Some(response.access_token);
+
+    Ok(self)
+  }
+
+  pub fn get_timeline_home(&self) -> Result<Vec<Status>> {
+    self.request(Method::Get, "/api/v1/timelines/home")
+  }
+}
+
+impl Mastodon {
+  fn request<T>(&self, method: Method, path: &str) -> Result<T>
+    where T: Deserialize
+  {
+    let url = Url::parse(&self.config.server).and_then(|u| u.join(path))?;
+    let token = self.config
+      .access_token
+      .clone()
+      .ok_or("Access token is empty")?;
+
+    let response = self.client
+      .request(method, url)
+      .header(Authorization(Bearer { token: token }))
+      .send()?;
+    if response.status != StatusCode::Ok {
+      Err(format!("bad request: {:?}", response.status))?;
+    }
+
     serde_json::from_reader(response).map_err(Into::into)
   }
 }

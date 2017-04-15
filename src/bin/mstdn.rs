@@ -56,4 +56,9 @@ fn main() {
   let cli = Mastodon::new(config)
     .and_then(|cli| cli.authenticate(username, password))
     .unwrap();
+
+  let timeline = cli.get_timeline_home().unwrap();
+  for status in timeline {
+    println!("{:?}", status);
+  }
 }

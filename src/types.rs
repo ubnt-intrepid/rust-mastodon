@@ -160,15 +160,15 @@ pub struct Status {
   pub created_at: String,
   pub reblogs_count: usize,
   pub favourites_count: usize,
-  pub reblogged: bool,
-  pub favourited: bool,
+  pub reblogged: Option<bool>,
+  pub favourited: Option<bool>,
   pub sensitive: bool,
   pub spoiler_text: String,
   pub visibility: StatusVisibility,
   pub media_attachments: Vec<Attachment>,
   pub mentions: Vec<Mention>,
   pub tags: Vec<Tag>,
-  pub application: Application,
+  pub application: Option<Application>,
 }
 
 #[derive(Debug, Deserialize)]
