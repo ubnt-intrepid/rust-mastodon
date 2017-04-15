@@ -4,7 +4,6 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
-use std::env;
 use std::fs::OpenOptions;
 use std::io::Write;
 use mastodon::{Mastodon, MastodonConfig};
@@ -14,7 +13,7 @@ use mastodon::register::{App, AppConfig};
 fn register_app() {
   let app = AppConfig::new("https://pawoo.net", "rustydon")
     .redirect_uris("urn:ietf:wg:oauth:2.0:oob")
-    .scopes("read")
+    .scopes("read write follow")
     .register()
     .unwrap();
 
@@ -29,7 +28,13 @@ fn register_app() {
 
 
 fn main() {
-  //register_app();
+  let ref matches = clap::App::new("mstdn")
+    .arg_from_usage("--register 'Register App'")
+    .get_matches();
+  if matches.is_present("register") {
+    register_app();
+    return;
+  }
 
   let f = OpenOptions::new()
     .read(true)

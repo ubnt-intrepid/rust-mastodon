@@ -85,7 +85,7 @@ impl Mastodon {
       .body(body)
       .send()?;
     if response.status != StatusCode::Ok {
-      Err(format!("bad authorization: {:?}", response.status))?;
+      Err(format!("Failed at POST: {:?}", response))?;
     }
     serde_json::from_reader(response).map_err(Into::into)
   }
